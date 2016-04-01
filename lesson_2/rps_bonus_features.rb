@@ -2,6 +2,8 @@
 
 # 1. Keeping Score - decided to go with a separate class for RPSRound which contains
 # much of the orignal game logic and can be called from within RPSGame.
+#
+# 2. Add Lizard, Spock
 
 require 'pry'
 
@@ -29,9 +31,9 @@ class Human < Player
   def choose
     choice = nil
     loop do
-      puts "Please choose rock, paper, or scissors:"
+      puts "Please choose rock, paper, scissors, lizard or Spock:"
       choice = gets.chomp
-      break if Move::VALUES.include? choice
+      break if Move::VALUES.map(&:downcase).include? choice.downcase
       puts "Sorry, invalid choice."
     end
     self.move = Move.new(choice)
@@ -49,7 +51,7 @@ class Computer < Player
 end
 
 class Move
-  VALUES = ['rock', 'paper', 'scissors'].freeze
+  VALUES = ['rock', 'paper', 'scissors', 'lizard', 'Spock'].freeze
 
   def initialize(value)
     @value = value
@@ -67,10 +69,20 @@ class Move
     @value == 'paper'
   end
 
+  def lizard?
+    @value == 'lizard'
+  end
+
+  def spock?
+    @value == 'Spock' || @value == 'spock'
+  end
+
   def >(other_move)
-    (rock? && other_move.scissors?) ||
-      (paper? && other_move.rock?) ||
-      (scissors? && other_move.paper?)
+    (rock? && (other_move.scissors? || other_move.lizard?)) ||
+      (paper? && (other_move.rock? || other_move.spock?)) ||
+      (scissors? && (other_move.paper? || other_move.lizard?)) ||
+      (lizard? && (other_move.spock? || other_move.paper?)) ||
+      (spock? && (other_move.scissors? || other_move.rock?))
   end
 
   def to_s
@@ -88,11 +100,11 @@ class RPSGame
   end
 
   def display_welcome_message
-    puts "Welcome to Rock, Paper, Scissors!"
+    puts "Welcome to Rock, Paper, Scissors, Lizard, Spock!"
   end
 
   def display_goodbye_message
-    puts "Thanks for playing Rock, Paper, Scissors! Goodbye!"
+    puts "Thanks for playing Rock, Paper, Scissors, Lizard, Spock! Goodbye!"
   end
 
   def display_score
