@@ -1,19 +1,16 @@
-# rps_design_choice_2.rb
+# rps_bonus_features.rb
 
-# - what is the primary improvement of this new design?
-#   The primary improvement is that by extracting the comparison logic for evaluating
-#   which move won from the RPSGame class to a specific Move class this simplifies the
-#   RPSGame class
+# 1. Keeping Score - decided to go with a separate class for RPSRound which contains
+# much of the orignal game logic and can be called from within RPSGame.
 
-# - what is the primary drawback of this new design?
-#   The primary drawback is that in adding anothe class it increase the complexity of
-#   the overall architecture of the program
+require 'pry'
 
 class Player
-  attr_accessor :move, :name
+  attr_accessor :move, :name, :score
 
   def initialize
     set_name
+    @score = 0
   end
 end
 
@@ -83,6 +80,7 @@ end
 
 class RPSGame
   attr_accessor :human, :computer
+  MAX_SCORE = 10
 
   def initialize
     @human = Human.new
@@ -97,46 +95,76 @@ class RPSGame
     puts "Thanks for playing Rock, Paper, Scissors! Goodbye!"
   end
 
-  def display_moves
-    puts "#{human.name} chose #{human.move}"
-    puts "#{computer.name} chose #{computer.move}"
+  def display_score
+    puts "#{human.name}: #{human.score} | #{computer.name}: #{computer.score}"
   end
 
-  def display_winner
-    if human.move > computer.move
-      puts "#{human.name} won!"
-    elsif computer.move > human.move
-      puts "#{computer.name} won!"
+  def overall_winner
+    if human.score >= MAX_SCORE
+      human
+    elsif computer.score >= MAX_SCORE
+      computer
     else
-      puts "It's a tie!"
+      false
     end
   end
 
-  def play_again?
-    answer = nil
-    loop do
-      puts "Would you like to play again? (y/n)?"
-      answer = gets.chomp
-      break if ['y', 'n'].include? answer.downcase
-      puts "Sorry, must be y or n."
-    end
-
-    return true if answer == 'y'
-    false
+  def display_overall_winner
+    puts "#{overall_winner.name} won the whole game!!"
   end
 
   def play
     display_welcome_message
 
     loop do
-      human.choose
-      computer.choose
-      display_moves
-      display_winner
-      break unless play_again?
+      RPSRound.new(human, computer).play
+      display_score
+      break if overall_winner
     end
-
+    display_overall_winner
     display_goodbye_message
+  end
+end
+
+class RPSRound
+  attr_accessor :human, :computer
+
+  def initialize(human, computer)
+    @human = human
+    @computer = computer
+  end
+
+  def display_moves
+    puts "#{human.name} chose #{human.move}"
+    puts "#{computer.name} chose #{computer.move}"
+  end
+
+  def winner
+    if human.move > computer.move
+      human
+    elsif computer.move > human.move
+      computer
+    end
+  end
+
+  def display_winner
+    if winner
+      puts "#{winner.name} won!"
+    else
+      puts "It's a tie!"
+    end
+  end
+
+  def award_point
+    winner.score += 1
+  end
+
+  def play
+    human.choose
+    computer.choose
+    display_moves
+    award_point if winner
+    display_winner
   end
 end
 
