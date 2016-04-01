@@ -4,6 +4,8 @@
 # much of the orignal game logic and can be called from within RPSGame.
 #
 # 2. Add Lizard, Spock
+#
+# 3. Rock, Paper, Scissors (Lizard, Spock) classes
 
 require 'pry'
 
@@ -29,14 +31,17 @@ class Human < Player
   end
 
   def choose
-    choice = nil
+    user_input = nil
     loop do
       puts "Please choose rock, paper, scissors, lizard or Spock:"
-      choice = gets.chomp
-      break if Move::VALUES.map(&:downcase).include? choice.downcase
+      user_input = gets.chomp
+      break if Move::VALUES.map(&:name).map(&:downcase).include? user_input.downcase
       puts "Sorry, invalid choice."
     end
-    self.move = Move.new(choice)
+    choice = nil
+    Move::VALUES.each { |value| choice = value if value.name.casecmp(user_input) == 0 }
+    choice_object = choice.new
+    self.move = Move.new(choice_object)
   end
 end
 
@@ -46,43 +51,108 @@ class Computer < Player
   end
 
   def choose
-    self.move = Move.new(Move::VALUES.sample)
+    self.move = Move.new(Move::VALUES.sample.new)
+  end
+end
+
+class Values
+  attr_accessor :descendants
+
+  def self.descendants
+    ObjectSpace.each_object(Class).select { |object_class| object_class < self }
+  end
+end
+
+class Rock < Values
+  attr_accessor :name
+
+  def initialize
+    @name = 'Rock'
+  end
+
+  def beats(other_class_name)
+    other_class_name.class == Scissors || other_class_name.class == Lizard
+  end
+end
+
+class Paper < Values
+  attr_accessor :name
+
+  def initialize
+    @name = 'Paper'
+  end
+
+  def beats(other_class_name)
+    other_class_name.class == Spock || other_class_name.class == Rock
+  end
+end
+
+class Scissors < Values
+  attr_accessor :name
+
+  def initialize
+    @name = 'Scissors'
+  end
+
+  def beats(other_class_name)
+    other_class_name.class == Lizard || other_class_name.class == Paper
+  end
+end
+
+class Lizard < Values
+  attr_accessor :name
+
+  def initialize
+    @name = 'Lizard'
+  end
+
+  def beats(other_class_name)
+    other_class_name.class == Spock || other_class_name.class == Paper
+  end
+end
+
+class Spock < Values
+  attr_accessor :name
+
+  def initialize
+    @name = 'Spock'
+  end
+
+  def beats(other_class_name)
+    other_class_name.class == Scissors || other_class_name.class == Rock
   end
 end
 
 class Move
-  VALUES = ['rock', 'paper', 'scissors', 'lizard', 'Spock'].freeze
+  attr_accessor :value
+  VALUES = Values.descendants.freeze
 
-  def initialize(value)
-    @value = value
+  def initialize(choice)
+    @value = choice
   end
 
   def scissors?
-    @value == 'scissors'
+    @value.name == 'Scissors'
   end
 
   def rock?
-    @value == 'rock'
+    @value.name == 'Rock'
   end
 
   def paper?
-    @value == 'paper'
+    @value.name == 'Paper'
   end
 
   def lizard?
-    @value == 'lizard'
+    @value.name == 'Lizard'
   end
 
   def spock?
-    @value == 'Spock' || @value == 'spock'
+    @value.name == 'Spock'
   end
 
   def >(other_move)
-    (rock? && (other_move.scissors? || other_move.lizard?)) ||
-      (paper? && (other_move.rock? || other_move.spock?)) ||
-      (scissors? && (other_move.paper? || other_move.lizard?)) ||
-      (lizard? && (other_move.spock? || other_move.paper?)) ||
-      (spock? && (other_move.scissors? || other_move.rock?))
+    @value.beats(other_move.value)
   end
 
   def to_s
@@ -147,8 +217,8 @@ class RPSRound
   end
 
   def display_moves
-    puts "#{human.name} chose #{human.move}"
-    puts "#{computer.name} chose #{computer.move}"
+    puts "#{human.name} chose #{human.move.value.name}"
+    puts "#{computer.name} chose #{computer.move.value.name}"
   end
 
   def winner
