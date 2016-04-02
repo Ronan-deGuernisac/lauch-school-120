@@ -5,9 +5,13 @@
 #
 # 2. Add Lizard, Spock
 #
-# 3. Rock, Paper, Scissors (Lizard, Spock) classes
+# 3. Rock, Paper, Scissors (Lizard, Spock) classes. I think that ultimately this is a
+# good design decision. It adds more classes but simplifies the logic in the Move class as
+# each value class can identify the other values that it beats
 #
 # 4. Add historical move tracking
+#
+# 5. Adjust computer choice based on history
 
 require 'pry'
 
@@ -144,7 +148,7 @@ end
 
 class RPSGame
   attr_accessor :human, :computer, :game_history
-  MAX_SCORE = 5
+  MAX_SCORE = 10
 
   def initialize
     @human = Human.new
