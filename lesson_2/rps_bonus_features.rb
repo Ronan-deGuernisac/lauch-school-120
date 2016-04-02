@@ -6,6 +6,8 @@
 # 2. Add Lizard, Spock
 #
 # 3. Rock, Paper, Scissors (Lizard, Spock) classes
+#
+# 4. Add historical move tracking
 
 require 'pry'
 
@@ -131,26 +133,6 @@ class Move
     @value = choice
   end
 
-  def scissors?
-    @value.name == 'Scissors'
-  end
-
-  def rock?
-    @value.name == 'Rock'
-  end
-
-  def paper?
-    @value.name == 'Paper'
-  end
-
-  def lizard?
-    @value.name == 'Lizard'
-  end
-
-  def spock?
-    @value.name == 'Spock'
-  end
-
   def >(other_move)
     @value.beats(other_move.value)
   end
@@ -194,16 +176,38 @@ class RPSGame
   def display_overall_winner
     puts "#{overall_winner.name} won the whole game!!"
   end
+  
+  def play_again?
+    answer = nil
+    loop do
+      puts "Would you like to play again? (y/n)?"
+      answer = gets.chomp
+      break if ['y', 'n'].include? answer.downcase
+      puts "Sorry, must be y or n."
+    end
+    
+    return true if answer == 'y'
+    return false
+  end
+  
+  def reset_scores
+    human.score = 0
+    computer.score = 0
+  end
 
   def play
     display_welcome_message
-
+    
     loop do
-      RPSRound.new(human, computer).play
-      display_score
-      break if overall_winner
+      reset_scores
+      loop do
+        RPSRound.new(human, computer).play
+        display_score
+        break if overall_winner
+      end
+      display_overall_winner
+      break unless play_again?
     end
-    display_overall_winner
     display_goodbye_message
   end
 end
