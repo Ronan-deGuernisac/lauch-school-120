@@ -143,12 +143,13 @@ class Move
 end
 
 class RPSGame
-  attr_accessor :human, :computer
-  MAX_SCORE = 10
+  attr_accessor :human, :computer, :game_history
+  MAX_SCORE = 5
 
   def initialize
     @human = Human.new
     @computer = Computer.new
+    @game_history = []
   end
 
   def display_welcome_message
@@ -161,6 +162,32 @@ class RPSGame
 
   def display_score
     puts "#{human.name}: #{human.score} | #{computer.name}: #{computer.score}"
+  end
+
+  def display_history_list
+    game_history.reverse.slice(0, 10).each do |round|
+      puts "| #{round[:human_move].value.name}".ljust(20) +
+           "| #{round[:computer_move].value.name}".ljust(20) +
+           "| #{round[:winner]}".ljust(20) + "|"
+    end
+  end
+
+  def display_holding_message
+    puts "History will appear here"
+  end
+
+  def display_info
+    puts "| #{human.name} (#{human.score})".ljust(20) + "| #{computer.name} (#{computer.score})".ljust(20) +
+         "| Result (last 10)".ljust(20) + "|"
+    puts "".ljust(61, '-')
+    game_history.empty? ? display_holding_message : display_history_list
+    puts "".ljust(61, '-')
+  end
+
+  def show_info
+    sleep 1
+    system('clear') || system('cls')
+    display_info
   end
 
   def overall_winner
@@ -176,7 +203,7 @@ class RPSGame
   def display_overall_winner
     puts "#{overall_winner.name} won the whole game!!"
   end
-  
+
   def play_again?
     answer = nil
     loop do
@@ -185,11 +212,11 @@ class RPSGame
       break if ['y', 'n'].include? answer.downcase
       puts "Sorry, must be y or n."
     end
-    
+
     return true if answer == 'y'
-    return false
+    false
   end
-  
+
   def reset_scores
     human.score = 0
     computer.score = 0
@@ -197,14 +224,17 @@ class RPSGame
 
   def play
     display_welcome_message
-    
+
     loop do
       reset_scores
       loop do
-        RPSRound.new(human, computer).play
-        display_score
+        show_info
+        round = RPSRound.new(human, computer)
+        round.play
+        game_history.push(round.history)
         break if overall_winner
       end
+      show_info
       display_overall_winner
       break unless play_again?
     end
@@ -213,11 +243,12 @@ class RPSGame
 end
 
 class RPSRound
-  attr_accessor :human, :computer
+  attr_accessor :human, :computer, :history
 
   def initialize(human, computer)
     @human = human
     @computer = computer
+    @history = { human_move: nil, computer_move: nil, winner: nil }
   end
 
   def display_moves
@@ -245,10 +276,21 @@ class RPSRound
     winner.score += 1
   end
 
+  def log_history
+    history[:human_move] = human.move
+    history[:computer_move] = computer.move
+    history[:winner] = if winner
+                         winner.name
+                       else
+                         'Draw'
+                       end
+  end
+
   def play
     human.choose
     computer.choose
     display_moves
+    log_history
     award_point if winner
     display_winner
   end
