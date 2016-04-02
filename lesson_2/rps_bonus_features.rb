@@ -56,8 +56,22 @@ class Computer < Player
     self.name = ['R2D2', 'Hal', 'Chappie', 'Wall-E', 'Eva'].sample
   end
 
-  def choose
-    self.move = Move.new(Move::VALUES.sample.new)
+  def history_ai(game_history)
+    # 1. Rank all human choices and select the highest choice
+    move_history = game_history.map { |history_item| history_item[:human_move].value.class }
+    move_history_hash = move_history.each_with_object(Hash.new(0)) { |choice, count| count[choice] += 1 }.sort_by { |_, value| value }
+    most_common_move = move_history_hash.reverse[0][0]
+    # 2. Identify the possible choices to beat the top human choice and select one
+    Move::VALUES.select { |move| move.beats(most_common_move) }.sample
+  end
+
+  def choose(game_history)
+    if game_history.empty?
+      self.move = Move.new(Move::VALUES.sample.new)
+    else
+      choice = history_ai(game_history)
+      self.move = Move.new(choice.new)
+    end
   end
 end
 
@@ -76,8 +90,8 @@ class Rock < Values
     @name = 'Rock'
   end
 
-  def beats(other_class_name)
-    other_class_name.class == Scissors || other_class_name.class == Lizard
+  def self.beats(other_class)
+    other_class == Scissors || other_class == Lizard
   end
 end
 
@@ -88,8 +102,8 @@ class Paper < Values
     @name = 'Paper'
   end
 
-  def beats(other_class_name)
-    other_class_name.class == Spock || other_class_name.class == Rock
+  def self.beats(other_class)
+    other_class == Spock || other_class == Rock
   end
 end
 
@@ -100,8 +114,8 @@ class Scissors < Values
     @name = 'Scissors'
   end
 
-  def beats(other_class_name)
-    other_class_name.class == Lizard || other_class_name.class == Paper
+  def self.beats(other_class)
+    other_class == Lizard || other_class == Paper
   end
 end
 
@@ -112,8 +126,8 @@ class Lizard < Values
     @name = 'Lizard'
   end
 
-  def beats(other_class_name)
-    other_class_name.class == Spock || other_class_name.class == Paper
+  def self.beats(other_class)
+    other_class == Spock || other_class == Paper
   end
 end
 
@@ -124,8 +138,8 @@ class Spock < Values
     @name = 'Spock'
   end
 
-  def beats(other_class_name)
-    other_class_name.class == Scissors || other_class_name.class == Rock
+  def self.beats(other_class)
+    other_class == Scissors || other_class == Rock
   end
 end
 
@@ -138,7 +152,7 @@ class Move
   end
 
   def >(other_move)
-    @value.beats(other_move.value)
+    @value.class.beats(other_move.value.class)
   end
 
   def to_s
@@ -233,7 +247,7 @@ class RPSGame
       reset_scores
       loop do
         show_info
-        round = RPSRound.new(human, computer)
+        round = RPSRound.new(human, computer, game_history)
         round.play
         game_history.push(round.history)
         break if overall_winner
@@ -247,12 +261,13 @@ class RPSGame
 end
 
 class RPSRound
-  attr_accessor :human, :computer, :history
+  attr_accessor :human, :computer, :history, :game_history
 
-  def initialize(human, computer)
+  def initialize(human, computer, game_history)
     @human = human
     @computer = computer
     @history = { human_move: nil, computer_move: nil, winner: nil }
+    @game_history = game_history
   end
 
   def display_moves
@@ -292,7 +307,7 @@ class RPSRound
 
   def play
     human.choose
-    computer.choose
+    computer.choose(game_history)
     display_moves
     log_history
     award_point if winner
