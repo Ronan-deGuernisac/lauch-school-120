@@ -93,7 +93,7 @@ class Hal < Computer
 
   def best_move(move_history)
     move_history_hash = move_history.each_with_object(Hash.new(0)) { |move, count| count[move] += 1 }
-    average_selection_amount = move_history_hash.values.inject(&:+) / 2
+    average_selection_amount = move_history_hash.values.inject(&:+) / move_history_hash.length
     move_history_hash.reject! { |_, value| value >= average_selection_amount + 2 }
     move_history_hash.map { |key, _| key }
   end
