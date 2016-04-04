@@ -52,8 +52,10 @@ class Human < Player
 end
 
 class Computer < Player
-  def set_name
-    self.name = ['R2D2', 'Hal', 'Chappie', 'Wall-E', 'Eva'].sample
+  attr_accessor :descendants
+
+  def self.descendants
+    ObjectSpace.each_object(Class).select { |object_class| object_class < self }
   end
 
   def history_ai(game_history)
@@ -72,6 +74,107 @@ class Computer < Player
       choice = history_ai(game_history)
       self.move = Move.new(choice.new)
     end
+  end
+end
+
+class R2D2 < Computer
+  attr_accessor :name
+
+  def initialize
+    @name = 'R2D2'
+  end
+end
+
+class RockBot < Computer
+  attr_accessor :name
+
+  def initialize
+    @name = 'Rock Bot'
+  end
+
+  def choose(_)
+    self.move = Move.new(Rock.new)
+  end
+end
+
+class Hal < Computer
+  attr_accessor :name
+
+  def initialize
+    @name = 'Hal'
+  end
+
+  def history_ai(game_history)
+    # 1. Identify all human choices made so far
+    move_history = game_history.map { |history_item| history_item[:human_move].value.class }
+    # 2. Identify if there are any choices not yet been selected. If so create a new array of those options and predict one
+    unused_moves = Move::VALUES.reject { |move| move_history.include?(move) }
+    # 3 if everything has been selected at least once identify the average amount of times a choice has been selected
+    if !unused_moves.empty?
+      choice = unused_moves.sample
+    else
+      # 4. If any choices have been chosen 2 or more times more than average remove them
+      # 5. Create an array of just the classes of the remaining choices and predict one
+      move_history_hash = move_history.each_with_object(Hash.new(0)) { |move, count| count[move] += 1 }
+      average_selection_amount = move_history_hash.values.inject(&:+) / 2
+      move_history_hash.reject! { |_, value| value >= average_selection_amount + 2 }
+      choice = move_history_hash.map { |key, _| key }.sample
+    end
+    Move::VALUES.select { |move| move.beats(choice) }.sample
+  end
+
+  def choose(game_history)
+    if game_history.empty?
+      self.move = Move.new(Move::VALUES.sample.new)
+    else
+      choice = history_ai(game_history)
+      self.move = Move.new(choice.new)
+    end
+  end
+end
+
+class Chappie < Computer
+  attr_accessor :name
+
+  def initialize
+    @name = 'Chappie'
+  end
+
+  def history_ai(game_history)
+    # 1. Rank all human choices and select the highest choice
+    move_history = game_history.map { |history_item| history_item[:human_move].value.class }
+    move_history_hash = move_history.each_with_object(Hash.new(0)) { |choice, count| count[choice] += 1 }.sort_by { |_, value| value }
+    move_history_hash.reverse[0][0]
+  end
+
+  def choose(game_history)
+    if game_history.empty?
+      self.move = Move.new(Spock.new)
+    else
+      choice = history_ai(game_history)
+      self.move = Move.new(choice.new)
+    end
+  end
+end
+
+class Eva < Computer
+  attr_accessor :name
+
+  def initialize
+    @name = 'Eva'
+  end
+end
+
+class WallE < Computer
+  attr_accessor :name
+
+  def initialize
+    @name = 'Wall-E'
+  end
+
+  def choose(_)
+    choices = [Lizard, Lizard, Lizard, Lizard, Paper, Paper, Rock, Scissors]
+    self.move = Move.new(choices.sample.new)
   end
 end
 
@@ -166,7 +269,7 @@ class RPSGame
 
   def initialize
     @human = Human.new
-    @computer = Computer.new
+    @computer = Hal.new # Computer.descendants.sample.new
     @game_history = []
   end
 
