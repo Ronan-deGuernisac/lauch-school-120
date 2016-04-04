@@ -1,20 +1,5 @@
 # rps_bonus_features.rb
 
-# 1. Keeping Score - decided to go with a separate class for RPSRound which contains
-# much of the orignal game logic and can be called from within RPSGame.
-#
-# 2. Add Lizard, Spock
-#
-# 3. Rock, Paper, Scissors (Lizard, Spock) classes. I think that ultimately this is a
-# good design decision. It adds more classes but simplifies the logic in the Move class as
-# each value class can identify the other values that it beats
-#
-# 4. Add historical move tracking
-#
-# 5. Adjust computer choice based on history
-
-require 'pry'
-
 class Player
   attr_accessor :move, :name, :score
 
@@ -59,11 +44,9 @@ class Computer < Player
   end
 
   def history_ai(game_history)
-    # 1. Rank all human choices and select the highest choice
     move_history = game_history.map { |history_item| history_item[:human_move].value.class }
     move_history_hash = move_history.each_with_object(Hash.new(0)) { |choice, count| count[choice] += 1 }.sort_by { |_, value| value }
     most_common_move = move_history_hash.reverse[0][0]
-    # 2. Identify the possible choices to beat the top human choice and select one
     Move::VALUES.select { |move| move.beats(most_common_move) }.sample
   end
 
@@ -104,22 +87,24 @@ class Hal < Computer
     @name = 'Hal'
   end
 
+  def unused_moves(move_history)
+    Move::VALUES.reject { |move| move_history.include?(move) }
+  end
+
+  def best_move(move_history)
+    move_history_hash = move_history.each_with_object(Hash.new(0)) { |move, count| count[move] += 1 }
+    average_selection_amount = move_history_hash.values.inject(&:+) / 2
+    move_history_hash.reject! { |_, value| value >= average_selection_amount + 2 }
+    move_history_hash.map { |key, _| key }
+  end
+
   def history_ai(game_history)
-    # 1. Identify all human choices made so far
     move_history = game_history.map { |history_item| history_item[:human_move].value.class }
-    # 2. Identify if there are any choices not yet been selected. If so create a new array of those options and predict one
-    unused_moves = Move::VALUES.reject { |move| move_history.include?(move) }
-    # 3 if everything has been selected at least once identify the average amount of times a choice has been selected
-    if !unused_moves.empty?
-      choice = unused_moves.sample
-    else
-      # 4. If any choices have been chosen 2 or more times more than average remove them
-      # 5. Create an array of just the classes of the remaining choices and predict one
-      move_history_hash = move_history.each_with_object(Hash.new(0)) { |move, count| count[move] += 1 }
-      average_selection_amount = move_history_hash.values.inject(&:+) / 2
-      move_history_hash.reject! { |_, value| value >= average_selection_amount + 2 }
-      choice = move_history_hash.map { |key, _| key }.sample
-    end
+    choice = if !unused_moves(move_history).empty?
+               unused_moves(move_history).sample
+             else
+               best_move(move_history).sample
+             end
     Move::VALUES.select { |move| move.beats(choice) }.sample
   end
 
@@ -141,7 +126,6 @@ class Chappie < Computer
   end
 
   def history_ai(game_history)
-    # 1. Rank all human choices and select the highest choice
     move_history = game_history.map { |history_item| history_item[:human_move].value.class }
     move_history_hash = move_history.each_with_object(Hash.new(0)) { |choice, count| count[choice] += 1 }.sort_by { |_, value| value }
     move_history_hash.reverse[0][0]
@@ -269,7 +253,7 @@ class RPSGame
 
   def initialize
     @human = Human.new
-    @computer = Hal.new # Computer.descendants.sample.new
+    @computer = Computer.descendants.sample.new
     @game_history = []
   end
 
@@ -297,12 +281,20 @@ class RPSGame
     puts "History will appear here"
   end
 
-  def display_info
+  def display_hr
+    puts "".ljust(61, '-')
+  end
+
+  def display_scores
     puts "| #{human.name} (#{human.score})".ljust(20) + "| #{computer.name} (#{computer.score})".ljust(20) +
          "| Result (last 10)".ljust(20) + "|"
-    puts "".ljust(61, '-')
+  end
+
+  def display_info
+    display_scores
+    display_hr
     game_history.empty? ? display_holding_message : display_history_list
-    puts "".ljust(61, '-')
+    display_hr
   end
 
   def show_info
@@ -343,16 +335,19 @@ class RPSGame
     computer.score = 0
   end
 
+  def round
+    new_round = RPSRound.new(human, computer, game_history)
+    new_round.play
+    game_history.push(new_round.history)
+  end
+
   def play
     display_welcome_message
-
     loop do
       reset_scores
       loop do
         show_info
-        round = RPSRound.new(human, computer, game_history)
-        round.play
-        game_history.push(round.history)
+        round
         break if overall_winner
       end
       show_info
