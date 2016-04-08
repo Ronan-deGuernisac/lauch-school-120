@@ -4,12 +4,16 @@ class Player
   attr_accessor :move, :name, :score
 
   def initialize
-    set_name
     @score = 0
   end
 end
 
 class Human < Player
+  def initialize
+    set_name
+    super
+  end
+
   def set_name
     n = ''
     loop do
@@ -21,18 +25,25 @@ class Human < Player
     self.name = n
   end
 
+  def choice_match?(value, user_input)
+    value.name.casecmp(user_input) == 0
+  end
+
+  def create_choice_object(user_input)
+    choice = nil
+    Move.descendants.each { |value| choice = value if choice_match?(value, user_input) }
+    choice.new
+  end
+
   def choose
     user_input = nil
     loop do
       puts "Please choose rock, paper, scissors, lizard or Spock:"
       user_input = gets.chomp
-      break if Move::VALUES.map(&:name).map(&:downcase).include? user_input.downcase
+      break if Move.descendants.map(&:name).include? user_input.capitalize
       puts "Sorry, invalid choice."
     end
-    choice = nil
-    Move::VALUES.each { |value| choice = value if value.name.casecmp(user_input) == 0 }
-    choice_object = choice.new
-    self.move = Move.new(choice_object)
+    self.move = Move.new(create_choice_object(user_input))
   end
 end
 
@@ -45,14 +56,17 @@ class Computer < Player
 
   def history_ai(game_history)
     move_history = game_history.map { |history_item| history_item[:human_move].value.class }
-    move_history_hash = move_history.each_with_object(Hash.new(0)) { |choice, count| count[choice] += 1 }.sort_by { |_, value| value }
+    move_history_hash = move_history.each_with_object(Hash.new(0)) do |choice, count|
+      count[choice] += 1
+    end
+    move_history_hash = move_history_hash.sort_by { |_, value| value }
     most_common_move = move_history_hash.reverse[0][0]
-    Move::VALUES.select { |move| move.beats(most_common_move) }.sample
+    Move.descendants.select { |move| move.beats(most_common_move) }.sample
   end
 
   def choose(game_history)
     if game_history.empty?
-      self.move = Move.new(Move::VALUES.sample.new)
+      self.move = Move.new(Move.descendants.sample.new)
     else
       choice = history_ai(game_history)
       self.move = Move.new(choice.new)
@@ -88,7 +102,7 @@ class Hal < Computer
   end
 
   def unused_moves(move_history)
-    Move::VALUES.reject { |move| move_history.include?(move) }
+    Move.descendants.reject { |move| move_history.include?(move) }
   end
 
   def best_move(move_history)
@@ -105,12 +119,12 @@ class Hal < Computer
              else
                best_move(move_history).sample
              end
-    Move::VALUES.select { |move| move.beats(choice) }.sample
+    Move.descendants.select { |move| move.beats(choice) }.sample
   end
 
   def choose(game_history)
     if game_history.empty?
-      self.move = Move.new(Move::VALUES.sample.new)
+      self.move = Move.new(Move.descendants.sample.new)
     else
       choice = history_ai(game_history)
       self.move = Move.new(choice.new)
@@ -162,15 +176,27 @@ class WallE < Computer
   end
 end
 
-class Values
-  attr_accessor :descendants
+class Move
+  attr_accessor :value
+
+  def initialize(choice)
+    @value = choice
+  end
 
   def self.descendants
     ObjectSpace.each_object(Class).select { |object_class| object_class < self }
   end
+
+  def >(other_move)
+    @value.class.beats(other_move.value.class)
+  end
+
+  def to_s
+    @value
+  end
 end
 
-class Rock < Values
+class Rock < Move
   attr_accessor :name
 
   def initialize
@@ -182,7 +208,7 @@ class Rock < Values
   end
 end
 
-class Paper < Values
+class Paper < Move
   attr_accessor :name
 
   def initialize
@@ -194,7 +220,7 @@ class Paper < Values
   end
 end
 
-class Scissors < Values
+class Scissors < Move
   attr_accessor :name
 
   def initialize
@@ -206,7 +232,7 @@ class Scissors < Values
   end
 end
 
-class Lizard < Values
+class Lizard < Move
   attr_accessor :name
 
   def initialize
@@ -218,7 +244,7 @@ class Lizard < Values
   end
 end
 
-class Spock < Values
+class Spock < Move
   attr_accessor :name
 
   def initialize
@@ -227,23 +253,6 @@ class Spock < Values
 
   def self.beats(other_class)
     other_class == Scissors || other_class == Rock
-  end
-end
-
-class Move
-  attr_accessor :value
-  VALUES = Values.descendants.freeze
-
-  def initialize(choice)
-    @value = choice
-  end
-
-  def >(other_move)
-    @value.class.beats(other_move.value.class)
-  end
-
-  def to_s
-    @value
   end
 end
 
@@ -290,17 +299,13 @@ class RPSGame
          "| Result (last 10)".ljust(20) + "|"
   end
 
-  def display_info
+  def show_info
+    sleep 1
+    system('clear') || system('cls')
     display_scores
     display_hr
     game_history.empty? ? display_holding_message : display_history_list
     display_hr
-  end
-
-  def show_info
-    sleep 1
-    system('clear') || system('cls')
-    display_info
   end
 
   def overall_winner
@@ -308,8 +313,6 @@ class RPSGame
       human
     elsif computer.score >= MAX_SCORE
       computer
-    else
-      false
     end
   end
 
@@ -326,8 +329,7 @@ class RPSGame
       puts "Sorry, must be y or n."
     end
 
-    return true if answer == 'y'
-    false
+    answer == 'y'
   end
 
   def reset_scores
