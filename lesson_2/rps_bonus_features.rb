@@ -47,12 +47,14 @@ class Human < Player
   end
 end
 
-class Computer < Player
-  attr_accessor :descendants
-
-  def self.descendants
+module Descendants
+  def descendants
     ObjectSpace.each_object(Class).select { |object_class| object_class < self }
   end
+end
+
+class Computer < Player
+  extend Descendants
 
   def history_ai(game_history)
     move_history = game_history.map { |history_item| history_item[:human_move].value.class }
@@ -177,14 +179,12 @@ class WallE < Computer
 end
 
 class Move
+  extend Descendants
+
   attr_accessor :value
 
   def initialize(choice)
     @value = choice
-  end
-
-  def self.descendants
-    ObjectSpace.each_object(Class).select { |object_class| object_class < self }
   end
 
   def >(other_move)
