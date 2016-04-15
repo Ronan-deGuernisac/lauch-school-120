@@ -142,20 +142,7 @@ class TTTGame
     display_welcome_message
 
     loop do
-      loop do
-        display_board
-
-        loop do
-          current_player_moves
-          break if board.someone_won? || board.full?
-          clear_screen_and_display_board
-        end
-        increment_score(board.winning_marker) if board.someone_won?
-        break if overall_winner
-        display_result
-        sleep(1)
-        reset_board
-      end
+      play_round
       display_overall_winner
       break unless play_again?
       reset_game
@@ -174,6 +161,26 @@ class TTTGame
 
   def display_goodbye_message
     puts "Thanks for playing Tic Tac Toe! Goodbye!"
+  end
+
+  def play_turn
+    loop do
+      current_player_moves
+      break if board.someone_won? || board.full?
+      clear_screen_and_display_board
+    end
+  end
+
+  def play_round
+    loop do
+      display_board
+      play_turn
+      increment_score(board.winning_marker) if board.someone_won?
+      break if overall_winner
+      display_result
+      sleep(1)
+      reset_board
+    end
   end
 
   def display_board
@@ -256,14 +263,20 @@ class TTTGame
   end
 
   def computer_moves
-    if board.best_square_empty?
-      board[Board::BEST_SQUARE] = computer.marker
-    elsif winning_square?
-      board[board.strategic_squares(COMPUTER_MARKER).sample] = computer.marker
-    elsif immediate_threat?
-      board[board.strategic_squares(@human.marker).sample] = computer.marker
+    if !!strategic_move
+      board[strategic_move] = computer.marker
     else
       board[board.unmarked_keys.sample] = computer.marker
+    end
+  end
+
+  def strategic_move
+    if board.best_square_empty?
+      Board::BEST_SQUARE
+    elsif winning_square?
+      board.strategic_squares(COMPUTER_MARKER).sample
+    elsif immediate_threat?
+      board.strategic_squares(@human.marker).sample
     end
   end
 
