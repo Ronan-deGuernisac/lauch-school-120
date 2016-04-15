@@ -12,6 +12,7 @@ class Board
   WINNING_LINES = [[1, 2, 3], [4, 5, 6], [7, 8, 9]] +
                   [[1, 4, 7], [2, 5, 8], [3, 6, 9]] +
                   [[1, 5, 9], [3, 5, 7]]
+  BEST_SQUARE = 5
 
   def initialize
     @squares = {}
@@ -82,6 +83,10 @@ class Board
     strategic_squares
   end
 
+  def best_square_empty?
+    @squares[BEST_SQUARE].unmarked?
+  end
+
   def reset
     (1..9).each { |key| @squares[key] = Square.new }
   end
@@ -119,7 +124,7 @@ class TTTGame
 
   HUMAN_MARKER = 'X'.freeze
   COMPUTER_MARKER = 'O'.freeze
-  FIRST_TO_MOVE = HUMAN_MARKER
+  FIRST_TO_MOVE = 'Choose'.freeze
   MAX_SCORE = 5
 
   attr_reader :board, :human, :computer
@@ -128,7 +133,7 @@ class TTTGame
     @board = Board.new
     @human = Player.new(HUMAN_MARKER)
     @computer = Player.new(COMPUTER_MARKER)
-    @current_player = HUMAN_MARKER
+    @current_player = FIRST_TO_MOVE
   end
 
   def play
@@ -136,6 +141,7 @@ class TTTGame
     display_welcome_message
 
     loop do
+      set_current_player if @current_player == 'Choose'
       loop do
         display_board
 
@@ -183,6 +189,21 @@ class TTTGame
     display_board
   end
 
+  def set_current_player
+    puts "Choose who goes first. 1: you, 2: computer"
+    answer = nil
+    loop do
+      answer = gets.chomp.to_i
+      break if (1..2).cover?(answer)
+      puts "Sorry, that's not a valid choice, choose 1 or 2."
+    end
+    @current_player = if answer == 1
+                        HUMAN_MARKER
+                      else
+                        COMPUTER_MARKER
+                      end
+  end
+
   def human_moves
     puts "Choose a square (#{board.unmarked_keys.join(', ')}): "
     square = nil
@@ -196,7 +217,9 @@ class TTTGame
   end
 
   def computer_moves
-    if winning_square?
+    if board.best_square_empty?
+      board[Board::BEST_SQUARE] = computer.marker
+    elsif winning_square?
       board[board.strategic_squares(COMPUTER_MARKER).sample] = computer.marker
     elsif immediate_threat?
       board[board.strategic_squares(HUMAN_MARKER).sample] = computer.marker
