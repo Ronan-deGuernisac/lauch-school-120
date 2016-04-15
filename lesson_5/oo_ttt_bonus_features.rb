@@ -122,7 +122,6 @@ end
 class TTTGame
   include ClearScreen
 
-  HUMAN_MARKER = 'X'.freeze
   COMPUTER_MARKER = 'O'.freeze
   FIRST_TO_MOVE = 'Choose'.freeze
   MAX_SCORE = 5
@@ -131,9 +130,10 @@ class TTTGame
 
   def initialize
     @board = Board.new
-    @human = Player.new(HUMAN_MARKER)
+    @human = Player.new(set_human_marker)
     @computer = Player.new(COMPUTER_MARKER)
-    @current_player = FIRST_TO_MOVE
+    @starting_player = set_current_player
+    @current_player = @starting_player
   end
 
   def play
@@ -141,7 +141,6 @@ class TTTGame
     display_welcome_message
 
     loop do
-      set_current_player if @current_player == 'Choose'
       loop do
         display_board
 
@@ -189,7 +188,32 @@ class TTTGame
     display_board
   end
 
+  def set_human_marker
+    puts "Please choose a single character marker. All ASCII characters are valid except '#{COMPUTER_MARKER}'."
+    answer = nil
+    loop do
+      answer = gets.chomp
+      break if valid_character(answer)
+      puts "Sorry, that's not a valid choice."
+    end
+    answer
+  end
+
+  def valid_character(answer)
+    answer.force_encoding("UTF-8").ascii_only? && answer.length == 1 && answer != COMPUTER_MARKER
+  end
+
   def set_current_player
+    @current_player = if FIRST_TO_MOVE == 'Choose'
+                        select_current_player
+                      elsif FIRST_TO_MOVE == 'Human'
+                        @human.marker
+                      else
+                        COMPUTER_MARKER
+                      end
+  end
+
+  def select_current_player
     puts "Choose who goes first. 1: you, 2: computer"
     answer = nil
     loop do
@@ -198,7 +222,7 @@ class TTTGame
       puts "Sorry, that's not a valid choice, choose 1 or 2."
     end
     @current_player = if answer == 1
-                        HUMAN_MARKER
+                        @human.marker
                       else
                         COMPUTER_MARKER
                       end
@@ -222,14 +246,14 @@ class TTTGame
     elsif winning_square?
       board[board.strategic_squares(COMPUTER_MARKER).sample] = computer.marker
     elsif immediate_threat?
-      board[board.strategic_squares(HUMAN_MARKER).sample] = computer.marker
+      board[board.strategic_squares(@human.marker).sample] = computer.marker
     else
       board[board.unmarked_keys.sample] = computer.marker
     end
   end
 
   def immediate_threat?
-    !board.strategic_squares(HUMAN_MARKER).empty?
+    !board.strategic_squares(@human.marker).empty?
   end
 
   def winning_square?
@@ -258,7 +282,7 @@ class TTTGame
   end
 
   def increment_score(winning_marker)
-    if winning_marker == HUMAN_MARKER
+    if winning_marker == @human.marker
       human.score += 1
     elsif winning_marker == COMPUTER_MARKER
       computer.score += 1
@@ -287,7 +311,7 @@ class TTTGame
 
   def reset_board
     board.reset
-    @current_player = FIRST_TO_MOVE
+    @current_player = @starting_player
     clear_screen
   end
 
@@ -303,7 +327,7 @@ class TTTGame
   end
 
   def current_player_moves
-    if @current_player == HUMAN_MARKER
+    if @current_player == @human.marker
       human_moves
     else
       computer_moves
@@ -312,10 +336,10 @@ class TTTGame
   end
 
   def switch_player
-    @current_player = if @current_player == HUMAN_MARKER
+    @current_player = if @current_player == @human.marker
                         COMPUTER_MARKER
                       else
-                        HUMAN_MARKER
+                        @human.marker
                       end
   end
 end
