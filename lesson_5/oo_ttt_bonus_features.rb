@@ -1,7 +1,5 @@
 # oo_ttt.rb
 
-require 'pry'
-
 module ClearScreen
   def clear_screen
     system('clear') || system('cls')
