@@ -111,9 +111,10 @@ class Square
 end
 
 class Player
-  attr_accessor :marker, :score
+  attr_accessor :name, :marker, :score
 
-  def initialize(marker)
+  def initialize(name, marker)
+    @name = name
     @marker = marker
     @score = 0
   end
@@ -130,8 +131,8 @@ class TTTGame
 
   def initialize
     @board = Board.new
-    @human = Player.new(set_human_marker)
-    @computer = Player.new(COMPUTER_MARKER)
+    @human = Player.new(ask_human_name, set_human_marker)
+    @computer = Player.new(set_computer_name, COMPUTER_MARKER)
     @starting_player = set_current_player
     @current_player = @starting_player
   end
@@ -176,8 +177,7 @@ class TTTGame
   end
 
   def display_board
-    puts "You're a #{human.marker}. Computer is a #{computer.marker}"
-    puts "You: #{human.score}. Computer: #{computer.score}"
+    puts "#{human.name} (#{human.marker}): #{human.score} || #{computer.name} (#{computer.marker}): #{computer.score}"
     puts ""
     board.draw
     puts ""
@@ -186,6 +186,17 @@ class TTTGame
   def clear_screen_and_display_board
     clear_screen
     display_board
+  end
+
+  def ask_human_name
+    puts "What's your name?"
+    answer = nil
+    loop do
+      answer = gets.chomp
+      break if !answer.empty?
+      puts "Sorry, that's not a valid choice."
+    end
+    answer
   end
 
   def set_human_marker
@@ -213,8 +224,12 @@ class TTTGame
                       end
   end
 
+  def set_computer_name
+    ['Wall-E', 'Hal', 'Eva', 'Deep Blue', 'Robbie'].sample
+  end
+
   def select_current_player
-    puts "Choose who goes first. 1: you, 2: computer"
+    puts "You'll be playing #{computer.name}. Choose who goes first. 1: you, 2: #{computer.name}"
     answer = nil
     loop do
       answer = gets.chomp.to_i
