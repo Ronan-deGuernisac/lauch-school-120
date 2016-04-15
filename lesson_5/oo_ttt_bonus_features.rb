@@ -70,6 +70,18 @@ class Board
     nil
   end
 
+  def strategic_squares(marker)
+    strategic_squares = []
+    WINNING_LINES.each do |line|
+      next unless !markers.empty?
+      if count_marker(@squares.values_at(*line), marker) == 2 &&
+         count_marker(@squares.values_at(*line), Square::INITIAL_MARKER) == 1
+        line.each { |square| strategic_squares << square if @squares[square].marker == Square::INITIAL_MARKER }
+      end
+    end
+    strategic_squares
+  end
+
   def reset
     (1..9).each { |key| @squares[key] = Square.new }
   end
@@ -184,7 +196,21 @@ class TTTGame
   end
 
   def computer_moves
-    board[board.unmarked_keys.sample] = computer.marker
+    if winning_square?
+      board[board.strategic_squares(COMPUTER_MARKER).sample] = computer.marker
+    elsif immediate_threat?
+      board[board.strategic_squares(HUMAN_MARKER).sample] = computer.marker
+    else
+      board[board.unmarked_keys.sample] = computer.marker
+    end
+  end
+
+  def immediate_threat?
+    !board.strategic_squares(HUMAN_MARKER).empty?
+  end
+
+  def winning_square?
+    !board.strategic_squares(COMPUTER_MARKER).empty?
   end
 
   def display_result
