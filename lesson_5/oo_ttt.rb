@@ -220,7 +220,7 @@ class TTTGame
   end
 
   def switch_player
-    @current_player = if HUMAN_MARKER
+    @current_player = if @current_player == HUMAN_MARKER
                         COMPUTER_MARKER
                       else
                         HUMAN_MARKER
