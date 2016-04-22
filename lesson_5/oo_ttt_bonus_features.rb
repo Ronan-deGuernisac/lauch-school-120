@@ -1,7 +1,7 @@
 # oo_ttt.rb
 
-module ClearScreen
-  def clear_screen
+module Screen
+  def self.clear
     system('clear') || system('cls')
   end
 end
@@ -54,7 +54,7 @@ class Board
   end
 
   def markers
-    @squares.values.collect(&:marker).reject { |mark| mark == Square::INITIAL_MARKER }
+    @squares.values.collect(&:marker).reject { |mark| mark == Square::EMPTY_MARKER }
   end
 
   def winning_marker
@@ -74,8 +74,8 @@ class Board
     WINNING_LINES.each do |line|
       next unless !markers.empty?
       if count_marker(@squares.values_at(*line), marker) == 2 &&
-         count_marker(@squares.values_at(*line), Square::INITIAL_MARKER) == 1
-        line.each { |square| strategic_squares << square if @squares[square].marker == Square::INITIAL_MARKER }
+         count_marker(@squares.values_at(*line), Square::EMPTY_MARKER) == 1
+        line.each { |square| strategic_squares << square if @squares[square].marker == Square::EMPTY_MARKER }
       end
     end
     strategic_squares
@@ -91,11 +91,11 @@ class Board
 end
 
 class Square
-  INITIAL_MARKER = ' '.freeze
+  EMPTY_MARKER = ' '.freeze
 
   attr_accessor :marker
 
-  def initialize(marker=INITIAL_MARKER)
+  def initialize(marker=EMPTY_MARKER)
     @marker = marker
   end
 
@@ -104,7 +104,7 @@ class Square
   end
 
   def unmarked?
-    @marker == INITIAL_MARKER
+    @marker == EMPTY_MARKER
   end
 end
 
@@ -119,7 +119,7 @@ class Player
 end
 
 class TTTGame
-  include ClearScreen
+  extend Screen
 
   COMPUTER_MARKER = 'O'.freeze
   FIRST_TO_MOVE = 'Choose'.freeze
@@ -131,12 +131,12 @@ class TTTGame
     @board = Board.new
     @human = Player.new(ask_human_name, set_human_marker)
     @computer = Player.new(set_computer_name, COMPUTER_MARKER)
-    @starting_player = set_current_player
-    @current_player = @starting_player
+    @starting_marker = set_current_marker
+    @current_marker = @starting_marker
   end
 
   def play
-    clear_screen
+    Screen.clear
     display_welcome_message
 
     loop do
@@ -189,7 +189,7 @@ class TTTGame
   end
 
   def clear_screen_and_display_board
-    clear_screen
+    Screen.clear
     display_board
   end
 
@@ -219,8 +219,8 @@ class TTTGame
     answer.force_encoding("UTF-8").ascii_only? && answer.length == 1 && answer != COMPUTER_MARKER
   end
 
-  def set_current_player
-    @current_player = if FIRST_TO_MOVE == 'Choose'
+  def set_current_marker
+    @current_marker = if FIRST_TO_MOVE == 'Choose'
                         select_current_player
                       elsif FIRST_TO_MOVE == 'Human'
                         @human.marker
@@ -241,7 +241,7 @@ class TTTGame
       break if (1..2).cover?(answer)
       puts "Sorry, that's not a valid choice, choose 1 or 2."
     end
-    @current_player = if answer == 1
+    @current_marker = if answer == 1
                         @human.marker
                       else
                         COMPUTER_MARKER
@@ -337,8 +337,8 @@ class TTTGame
 
   def reset_board
     board.reset
-    @current_player = @starting_player
-    clear_screen
+    @current_marker = @starting_marker
+    Screen.clear
   end
 
   def reset_game
@@ -353,16 +353,16 @@ class TTTGame
   end
 
   def current_player_moves
-    if @current_player == @human.marker
+    if @current_marker == @human.marker
       human_moves
     else
       computer_moves
     end
-    switch_player
+    switch_marker
   end
 
-  def switch_player
-    @current_player = if @current_player == @human.marker
+  def switch_marker
+    @current_marker = if @current_marker == @human.marker
                         COMPUTER_MARKER
                       else
                         @human.marker
