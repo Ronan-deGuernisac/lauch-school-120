@@ -194,14 +194,18 @@ class Game
   end
 
   def start
-    deal_initial_cards
-    show_table
-    play_turn
-    if !@player.busted?
-      switch_participant
+    loop do
+      deal_initial_cards
+      show_table
       play_turn
+      if !@player.busted?
+        switch_participant
+        play_turn
+      end
+      show_result
+      break unless play_again?
+      reset_game
     end
-    show_result
   end
   
   def deal_initial_cards
@@ -260,6 +264,29 @@ class Game
 
   def show_result
     puts "#{winner.type} won the game!"
+  end
+  
+  def play_again?
+    answer = nil
+    loop do
+      puts "Would you like to play again? (y/n)"
+      answer = gets.chomp.downcase
+      break if %w(y n).include? answer
+      puts "Sorry, must be y or n"
+    end
+
+    answer == 'y'
+  end
+  
+  def reset_game
+    deck = Deck.new.cards.shuffle
+    @current_participant = @player
+    @dealer.turn = false
+    clear_hands([@player.hand , @dealer.hand])
+  end
+  
+  def clear_hands(hands)
+    hands.each { |hand| hand.clear }
   end
 end
 
