@@ -1,17 +1,5 @@
 # oo_twenty_one.rb
 
-# Twenty-One is a card game consisting of a dealer and a player, where the participants
-# try to get as close to 21 as possible without going over.
-
-# Here is an overview of the game:
-# - Both participants are initially dealt 2 cards from a 52-card deck.
-# - The player takes the first turn, and can "hit" or "stay".
-# - If the player busts, he loses. If he stays, it's the dealer's turn.
-# - The dealer must hit until his cards add up to at least 17.
-# - If he busts, the player wins. If both player and dealer stays, then the highest total wins.
-
-require 'pry'
-
 module Screen
   def self.clear
     system('clear') || system('cls')
@@ -20,24 +8,24 @@ end
 
 module Hand
   HIGHEST_SCORE = 21
-  
+
   def show_cards
     cards = []
     hand.each { |card| cards << "#{card.card_symbol}#{card.suit_symbol}" }
     cards.join("  ")
   end
-  
+
   def show_score
     calculate_score
   end
-  
+
   def calculate_score
     score = 0
     hand.each { |card| score += card.points }
     score = reduce_aces(score) if score > HIGHEST_SCORE && ace_count > 0
     score
   end
-  
+
   def ace_count
     ace_count = 0
     hand.each { |card| ace_count += 1 if card.card_symbol == "A" }
@@ -55,12 +43,12 @@ module Hand
 end
 
 class Participant
-  PARTICIPANT_OPTIONS = { 'h' => 'Hit', 's' => 'Stick' }
-  
+  PARTICIPANT_OPTIONS = { 'h' => 'Hit', 's' => 'Stick' }.freeze
+
   include Hand
-  
+
   attr_accessor :hand, :type
-  
+
   def initialize(type)
     @hand = []
     @type = type
@@ -82,7 +70,7 @@ class Player < Participant
     end
     hit_or_stick
   end
-  
+
   def valid_choice?(choice)
     PARTICIPANT_OPTIONS.key?(choice)
   end
@@ -92,17 +80,17 @@ class Dealer < Participant
   DEALER_STICK_SCORE = 17
 
   attr_accessor :turn
-  
+
   def initialize(type)
     @turn = false
     super
   end
-  
+
   def deal(deck, participant)
     card = deck.shift
     participant.hand << card
   end
-  
+
   def announce_choice(choice, player_type)
     if choice == 'h'
       puts "#{player_type} chose to hit"
@@ -110,7 +98,7 @@ class Dealer < Participant
       puts "#{player_type} chose to stick"
     end
   end
-  
+
   def announce_bust(player_type)
     puts "#{player_type} busted!"
   end
@@ -133,38 +121,38 @@ end
 
 class Deck
   SUITS = [
-  { name: "Spades", symbol: "\u2660" },
-  { name: "Hearts", symbol: "\u2665" },
-  { name: "Clubs", symbol: "\u2663" },
-  { name: "Diamonds", symbol: "\u2666" }
-  ]
+    { name: "Spades", symbol: "\u2660" },
+    { name: "Hearts", symbol: "\u2665" },
+    { name: "Clubs", symbol: "\u2663" },
+    { name: "Diamonds", symbol: "\u2666" }
+  ].freeze
 
   CARDS = [
-  { name: "Two", symbol: "2", points: 2 },
-  { name: "Three", symbol: "3", points: 3 },
-  { name: "Four", symbol: "4", points: 4 },
-  { name: "Five", symbol: "5", points: 5 },
-  { name: "Six", symbol: "6", points: 6 },
-  { name: "Seven", symbol: "7", points: 7 },
-  { name: "Eight", symbol: "8", points: 8 },
-  { name: "Nine", symbol: "9", points: 9 },
-  { name: "Ten", symbol: "10", points: 10 },
-  { name: "Jack", symbol: "J", points: 10 },
-  { name: "Queen", symbol: "Q", points: 10 },
-  { name: "King", symbol: "K", points: 10 },
-  { name: "Ace", symbol: "A", points: 11 }
-  ]
-  
+    { name: "Two", symbol: "2", points: 2 },
+    { name: "Three", symbol: "3", points: 3 },
+    { name: "Four", symbol: "4", points: 4 },
+    { name: "Five", symbol: "5", points: 5 },
+    { name: "Six", symbol: "6", points: 6 },
+    { name: "Seven", symbol: "7", points: 7 },
+    { name: "Eight", symbol: "8", points: 8 },
+    { name: "Nine", symbol: "9", points: 9 },
+    { name: "Ten", symbol: "10", points: 10 },
+    { name: "Jack", symbol: "J", points: 10 },
+    { name: "Queen", symbol: "Q", points: 10 },
+    { name: "King", symbol: "K", points: 10 },
+    { name: "Ace", symbol: "A", points: 11 }
+  ].freeze
+
   attr_reader :cards
-  
+
   def initialize
     @cards = SUITS.product(CARDS).map { |card| create_card(card) }
   end
-  
+
   def create_card(card)
     Card.new(card[0][:name], card[0][:symbol], card[1][:name], card[1][:symbol], card[1][:points])
   end
-  
+
   def shuffle
     @deck.shuffle
   end
@@ -183,9 +171,9 @@ end
 
 class Game
   extend Screen
-  
+
   attr_reader :deck
-  
+
   def initialize
     @deck = Deck.new.cards.shuffle
     @dealer = Dealer.new('Dealer')
@@ -194,6 +182,13 @@ class Game
   end
 
   def start
+    show_welcome_message
+    sleep(1)
+    game_loop
+    show_goodbye_message
+  end
+
+  def game_loop
     loop do
       deal_initial_cards
       show_table
@@ -207,14 +202,22 @@ class Game
       reset_game
     end
   end
-  
+
+  def show_welcome_message
+    puts "Welcome to OO Twenty One!"
+  end
+
+  def show_goodbye_message
+    puts "Thanks for playing OO Twenty One. Goodbye!"
+  end
+
   def deal_initial_cards
     2.times do
       @dealer.deal(deck, @player)
       @dealer.deal(deck, @dealer)
     end
   end
-  
+
   def show_table
     Screen.clear
     puts "-----------------------------------------"
@@ -224,18 +227,26 @@ class Game
     puts " Dealer |  #{@dealer.show_score}".ljust(17, ' ') + "| #{@dealer.show_cards}"
     puts "-----------------------------------------"
   end
-  
+
   def play_turn
     loop do
       show_table
       choice = @current_participant.choose
       @dealer.announce_choice(choice.downcase, @current_participant.type)
       sleep(1)
-      @dealer.deal(deck, @current_participant) if choice.downcase == 'h'
-      break if @current_participant.busted? || choice.downcase == 's'
+      @dealer.deal(deck, @current_participant) if hit?(choice)
+      break if @current_participant.busted? || stick?(choice)
     end
     show_table
     @dealer.announce_bust(@current_participant.type) if @current_participant.busted?
+  end
+
+  def hit?(choice)
+    choice.casecmp('h') == 0
+  end
+
+  def stick?(choice)
+    choice.casecmp('s') == 0
   end
 
   def switch_participant
@@ -265,7 +276,7 @@ class Game
   def show_result
     puts "#{winner.type} won the game!"
   end
-  
+
   def play_again?
     answer = nil
     loop do
@@ -277,16 +288,16 @@ class Game
 
     answer == 'y'
   end
-  
+
   def reset_game
-    deck = Deck.new.cards.shuffle
+    @deck = Deck.new.cards.shuffle
     @current_participant = @player
     @dealer.turn = false
-    clear_hands([@player.hand , @dealer.hand])
+    clear_hands([@player.hand, @dealer.hand])
   end
-  
+
   def clear_hands(hands)
-    hands.each { |hand| hand.clear }
+    hands.each(&:clear)
   end
 end
 
