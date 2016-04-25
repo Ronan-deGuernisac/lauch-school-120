@@ -91,6 +91,13 @@ end
 class Dealer < Participant
   DEALER_STICK_SCORE = 17
 
+  attr_accessor :turn
+  
+  def initialize(type)
+    @turn = false
+    super
+  end
+  
   def deal(deck, participant)
     card = deck.shift
     participant.hand << card
@@ -112,13 +119,15 @@ class Dealer < Participant
     calculate_score >= DEALER_STICK_SCORE ? "s" : "h"
   end
 
-  def hit
+  def show_score
+    turn ? calculate_score : "??"
   end
 
-  def stay
-  end
-
-  def total
+  def show_cards
+    cards = []
+    hand.each { |card| cards << "#{card.card_symbol}#{card.suit_symbol}" }
+    cards[0].replace('??') unless turn
+    cards.join("  ")
   end
 end
 
@@ -203,8 +212,8 @@ class Game
     puts "-----------------------------------------"
     puts " PLAYER | SCORE  | CARDS"
     puts "-----------------------------------------"
-    puts " Player |   #{@player.show_score}   | #{@player.show_cards}"
-    puts " Dealer |   #{@dealer.show_score}   | #{@dealer.show_cards}"
+    puts " Player |  #{@player.show_score}".ljust(17, ' ') + "| #{@player.show_cards}"
+    puts " Dealer |  #{@dealer.show_score}".ljust(17, ' ') + "| #{@dealer.show_cards}"
     puts "-----------------------------------------"
   end
   
@@ -222,6 +231,7 @@ class Game
   end
   
   def dealer_turn
+    @dealer.turn = true
     loop do
       show_table
       @player.busted? ? dealer_choice = 's' : dealer_choice = @dealer.choose
