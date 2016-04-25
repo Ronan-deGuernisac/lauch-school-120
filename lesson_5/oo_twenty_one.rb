@@ -190,13 +190,17 @@ class Game
     @deck = Deck.new.cards.shuffle
     @dealer = Dealer.new('Dealer')
     @player = Player.new('Player')
+    @current_participant = @player
   end
 
   def start
     deal_initial_cards
     show_table
-    player_turn
-    dealer_turn
+    play_turn
+    if !@player.busted?
+      switch_participant
+      play_turn
+    end
     show_result
   end
   
@@ -217,31 +221,27 @@ class Game
     puts "-----------------------------------------"
   end
   
-  def player_turn
+  def play_turn
     loop do
       show_table
-      player_choice = @player.choose
-      @dealer.announce_choice(player_choice.downcase, @player.type)
+      choice = @current_participant.choose
+      @dealer.announce_choice(choice.downcase, @current_participant.type)
       sleep(1)
-      @dealer.deal(deck, @player) if player_choice.downcase == 'h'
-      break if @player.busted? || player_choice.downcase == 's'
+      @dealer.deal(deck, @current_participant) if choice.downcase == 'h'
+      break if @current_participant.busted? || choice.downcase == 's'
     end
     show_table
-    @dealer.announce_bust(@player.type) if @player.busted?
+    @dealer.announce_bust(@current_participant.type) if @current_participant.busted?
   end
-  
-  def dealer_turn
-    @dealer.turn = true
-    loop do
-      show_table
-      @player.busted? ? dealer_choice = 's' : dealer_choice = @dealer.choose
-      @dealer.announce_choice(dealer_choice.downcase, @dealer.type)
-      sleep(1)
-      @dealer.deal(deck, @dealer) if dealer_choice.downcase == 'h'
-      break if @dealer.busted? || dealer_choice.downcase == 's'
+
+  def switch_participant
+    if @current_participant == @player
+      @current_participant = @dealer
+      @dealer.turn = true
+    else
+      @current_participant = @player
+      @dealer.turn = false
     end
-    show_table
-    @dealer.announce_bust(@dealer.type) if @dealer.busted?
   end
 
   def decide_winner
