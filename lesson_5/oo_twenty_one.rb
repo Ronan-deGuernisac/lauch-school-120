@@ -146,11 +146,7 @@ class Deck
   attr_reader :cards
 
   def initialize
-    @cards = SUITS.product(CARDS).map { |card| create_card(card) }
-  end
-
-  def create_card(card)
-    Card.new(card[0][:name], card[0][:symbol], card[1][:name], card[1][:symbol], card[1][:points])
+    @cards = SUITS.product(CARDS).map { |card| Card.new(*card) }
   end
 
   def shuffle
@@ -159,13 +155,21 @@ class Deck
 end
 
 class Card
-  attr_reader :suit, :suit_symbol, :card, :card_symbol, :points
-  def initialize(suit, suit_symbol, card, card_symbol, points)
+  def initialize(suit, value)
     @suit = suit
-    @suit_symbol = suit_symbol
-    @card = card
-    @card_symbol = card_symbol
-    @points = points
+    @value = value
+  end
+
+  def card_symbol
+    @value[:symbol]
+  end
+
+  def suit_symbol
+    @suit[:symbol]
+  end
+
+  def points
+    @value[:points]
   end
 end
 
@@ -205,6 +209,7 @@ class Game
 
   def show_welcome_message
     puts "Welcome to OO Twenty One!"
+    puts "House rules: House wins in a tie condition!"
   end
 
   def show_goodbye_message
