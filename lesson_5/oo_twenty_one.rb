@@ -76,8 +76,8 @@ class Player < Participant
   end
 end
 
-class Dealer < Participant
-  DEALER_STICK_SCORE = 17
+class House < Participant
+  HOUSE_STICK_SCORE = 17
 
   attr_accessor :turn
 
@@ -86,6 +86,23 @@ class Dealer < Participant
     super
   end
 
+  def choose
+    calculate_score >= HOUSE_STICK_SCORE ? "s" : "h"
+  end
+
+  def show_score
+    turn ? calculate_score : "??"
+  end
+
+  def show_cards
+    cards = []
+    hand.each { |card| cards << "#{card.card_symbol}#{card.suit_symbol}" }
+    cards[0].replace('??') unless turn
+    cards.join("  ")
+  end
+end
+
+module Dealer
   def deal(deck, participant)
     card = deck.shift
     participant.hand << card
@@ -101,21 +118,6 @@ class Dealer < Participant
 
   def announce_bust(player_type)
     puts "#{player_type} busted!"
-  end
-
-  def choose
-    calculate_score >= DEALER_STICK_SCORE ? "s" : "h"
-  end
-
-  def show_score
-    turn ? calculate_score : "??"
-  end
-
-  def show_cards
-    cards = []
-    hand.each { |card| cards << "#{card.card_symbol}#{card.suit_symbol}" }
-    cards[0].replace('??') unless turn
-    cards.join("  ")
   end
 end
 
@@ -175,12 +177,13 @@ end
 
 class Game
   extend Screen
+  include Dealer
 
   attr_reader :deck
 
   def initialize
     @deck = Deck.new.cards.shuffle
-    @dealer = Dealer.new('Dealer')
+    @house = House.new('House')
     @player = Player.new('Player')
     @current_participant = @player
   end
@@ -218,8 +221,8 @@ class Game
 
   def deal_initial_cards
     2.times do
-      @dealer.deal(deck, @player)
-      @dealer.deal(deck, @dealer)
+      deal(deck, @player)
+      deal(deck, @house)
     end
   end
 
@@ -229,7 +232,7 @@ class Game
     puts " PLAYER | SCORE  | CARDS"
     puts "-----------------------------------------"
     puts " Player |  #{@player.show_score}".ljust(17, ' ') + "| #{@player.show_cards}"
-    puts " Dealer |  #{@dealer.show_score}".ljust(17, ' ') + "| #{@dealer.show_cards}"
+    puts " House  |  #{@house.show_score}".ljust(17, ' ') + "| #{@house.show_cards}"
     puts "-----------------------------------------"
   end
 
@@ -237,13 +240,13 @@ class Game
     loop do
       show_table
       choice = @current_participant.choose
-      @dealer.announce_choice(choice.downcase, @current_participant.type)
+      announce_choice(choice.downcase, @current_participant.type)
       sleep(1)
-      @dealer.deal(deck, @current_participant) if hit?(choice)
+      deal(deck, @current_participant) if hit?(choice)
       break if @current_participant.busted? || stick?(choice)
     end
     show_table
-    @dealer.announce_bust(@current_participant.type) if @current_participant.busted?
+    announce_bust(@current_participant.type) if @current_participant.busted?
   end
 
   def hit?(choice)
@@ -256,26 +259,26 @@ class Game
 
   def switch_participant
     if @current_participant == @player
-      @current_participant = @dealer
-      @dealer.turn = true
+      @current_participant = @house
+      @house.turn = true
     else
       @current_participant = @player
-      @dealer.turn = false
+      @house.turn = false
     end
   end
 
   def decide_winner
-    if @dealer.busted?
+    if @house.busted?
       @player
-    elsif @dealer.calculate_score >= @player.calculate_score
-      @dealer
+    elsif @house.calculate_score >= @player.calculate_score
+      @house
     else
       @player
     end
   end
 
   def winner
-    @player.busted? ? @dealer : decide_winner
+    @player.busted? ? @house : decide_winner
   end
 
   def show_result
@@ -297,8 +300,8 @@ class Game
   def reset_game
     @deck = Deck.new.cards.shuffle
     @current_participant = @player
-    @dealer.turn = false
-    clear_hands([@player.hand, @dealer.hand])
+    @house.turn = false
+    clear_hands([@player.hand, @house.hand])
   end
 
   def clear_hands(hands)
